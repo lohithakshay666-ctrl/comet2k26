@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comet 5.0 — ECE IDE</title>
+<style>
+:root {
+  --bg:          #0d0d1a;
+  --surface:     #12122a;
+  --surface2:    #0a1628;
+  --panel:       #111125;
+  --panel2:      #0c0c1e;
+  --border:      #1e2040;
+  --border2:     #2a2d50;
+  --accent:      #7c6af5;
+  --accent2:     #5ee7d4;
+  --orange:      #ff9f5a;
+  --green:       #6dffc0;
+  --red:         #ff5f7e;
+  --yellow:      #ffd166;
+  --purple:      #c084fc;
+  --teal:        #5ee7d4;
+  --pink:        #f472b6;
+  --text:        #c8c8e8;
+  --text-dim:    #454565;
+  --text-muted:  #5a5a80;
+  --text-bright: #e8e8ff;
+  --keyword-c:   #c084fc;
+  --string-c:    #6dffc0;
+  --comment-c:   #3d3d60;
+  --number-c:    #ff9f5a;
+  --type-c:      #7c6af5;
+  --directive-c: #ffd166;
+  --label-c:     #f472b6;
+  --operator-c:  #5ee7d4;
+  --fn-c:        #93c5fd;
+  --port-c:      #5ee7d4;
+  --comet-glow:  rgba(124,106,245,0.3);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:'Segoe UI','Tahoma',sans-serif; font-size:13px; }
+
+/* ─── TITLE BAR ─── */
+#titlebar {
+  height:42px;
+  background:linear-gradient(90deg, #0c0c22 0%, #12122a 100%);
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  padding:0 14px;
+  gap:14px;
+  flex-shrink:0;
+  position:relative;
+  overflow:hidden;
+}
+#titlebar::after {
+  content:'';
+  position:absolute;
+  bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--accent),var(--accent2),transparent);
+  animation:shimmer 4s infinite;
+}
+@keyframes shimmer { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+.tb-logo {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:18px;
+  font-weight:800;
+  letter-spacing:.5px;
+  font-family:'Consolas',monospace;
+  white-space:nowrap;
+}
+.logo-comet { color:#ffffff; }
+.logo-ver   { color:var(--accent); font-size:13px; font-weight:400; opacity:.8; }
+.comet-icon {
+  width:26px; height:26px;
+  background:linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius:50% 50% 50% 10%;
+  transform:rotate(-30deg);
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px;
+  box-shadow:0 0 12px var(--comet-glow);
+  flex-shrink:0;
+}
+
+.tb-sep { width:1px; height:20px; background:var(--border); }
+.menu-bar { display:flex; gap:1px; }
+.menu-btn {
+  padding:5px 11px;
+  background:none; border:none;
+  color:var(--text-muted); cursor:pointer;
+  border-radius:4px;
+  font-family:'Segoe UI',sans-serif; font-size:12px;
+  transition:all .15s;
+}
+.menu-btn:hover { background:var(--surface); color:var(--text); }
+.tb-right { margin-left:auto; display:flex; gap:8px; align-items:center; }
+.pill {
+  padding:3px 10px; border-radius:12px;
+  font-size:10px; font-family:'Consolas',monospace;
+  letter-spacing:.5px; font-weight:600;
+}
+.pill-offline { background:rgba(109,255,192,.1); color:var(--green); border:1px solid rgba(109,255,192,.25); }
+.pill-ece     { background:rgba(124,106,245,.15); color:var(--accent); border:1px solid rgba(124,106,245,.3); }
+
+/* ─── LANG TABS ─── */
+#lang-tabs {
+  height:40px;
+  background:var(--panel);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:flex-end;
+  padding:0 8px; gap:2px; flex-shrink:0;
+}
+.lang-tab {
+  padding:7px 16px;
+  border:1px solid transparent; border-bottom:none;
+  background:transparent; color:var(--text-muted);
+  cursor:pointer; border-radius:5px 5px 0 0;
+  font-family:'Consolas',monospace; font-size:11.5px;
+  letter-spacing:.3px; transition:all .15s;
+  display:flex; align-items:center; gap:6px; white-space:nowrap;
+}
+.lang-tab:hover { color:var(--text); background:rgba(255,255,255,.03); }
+.lang-tab.active {
+  background:var(--bg); border-color:var(--border);
+  color:var(--text-bright); position:relative;
+}
+.lang-tab.active::after {
+  content:''; position:absolute;
+  bottom:-1px; left:0; right:0; height:2px;
+  background:var(--tab-clr,var(--accent));
+}
+.lang-tab[data-lang="verilog"] { --tab-clr:#7c6af5; }
+.lang-tab[data-lang="8051"]    { --tab-clr:#ff9f5a; }
+.lang-tab[data-lang="c"]       { --tab-clr:#6dffc0; }
+.lang-tab[data-lang="arduino"] { --tab-clr:#5ee7d4; }
+.tab-dot {
+  width:7px;height:7px;border-radius:50%;
+  background:var(--tab-clr,var(--accent)); opacity:.5;
+}
+.lang-tab.active .tab-dot { opacity:1; box-shadow:0 0 6px var(--tab-clr,var(--accent)); }
+
+/* ─── TOOLBAR ─── */
+#toolbar {
+  height:36px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center;
+  padding:0 10px; gap:4px; flex-shrink:0;
+}
+.tb-action {
+  padding:4px 12px; border-radius:4px;
+  border:1px solid var(--border);
+  background:var(--panel); color:var(--text);
+  cursor:pointer; font-family:'Consolas',monospace; font-size:11px;
+  letter-spacing:.2px; transition:all .15s;
+  display:flex; align-items:center; gap:5px;
+}
+.tb-action:hover { border-color:var(--accent); color:var(--accent); }
+.tb-action.run:hover { border-color:var(--green); color:var(--green); background:rgba(109,255,192,.07); }
+.tb-action.danger:hover { border-color:var(--red); color:var(--red); }
+.tb-sep2 { width:1px;height:20px;background:var(--border);margin:0 3px; }
+.tb-right-info {
+  margin-left:auto; font-family:'Consolas',monospace; font-size:11px;
+  color:var(--text-muted); display:flex; gap:14px;
+}
+
+/* ─── WORKSPACE ─── */
+#workspace { display:flex; flex:1; overflow:hidden; height:calc(100vh - 42px - 40px - 36px - 24px); }
+
+/* ─── SIDEBAR ─── */
+#sidebar {
+  width:210px; background:var(--panel);
+  border-right:1px solid var(--border);
+  display:flex; flex-direction:column; overflow:hidden; flex-shrink:0;
+}
+.sb-header {
+  padding:8px 10px 6px;
+  font-family:'Consolas',monospace; font-size:10px;
+  letter-spacing:1.5px; color:var(--text-muted);
+  text-transform:uppercase;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(90deg,var(--panel2),var(--panel));
+  display:flex; align-items:center; gap:6px;
+}
+#sb-scroll { overflow-y:auto; flex:1; padding:6px; }
+.sb-group-title {
+  font-family:'Consolas',monospace; font-size:9.5px;
+  letter-spacing:1px; color:var(--text-dim);
+  text-transform:uppercase; padding:8px 4px 4px;
+}
+.snippet-card {
+  padding:7px 9px; border:1px solid var(--border);
+  border-radius:4px; cursor:pointer; margin-bottom:3px;
+  transition:all .15s; background:var(--panel2);
+}
+.snippet-card:hover { border-color:var(--accent); background:rgba(124,106,245,.06); }
+.snippet-card .sc-name { font-size:12px; color:var(--text); }
+.snippet-card .sc-desc { font-size:10px; color:var(--text-muted); margin-top:2px; }
+
+/* ─── EDITOR ─── */
+#editor-container { flex:1; display:flex; flex-direction:column; overflow:hidden; position:relative; }
+.editor-pane { flex:1; display:flex; overflow:hidden; position:relative; }
+#line-nums {
+  width:52px; background:var(--panel); border-right:1px solid var(--border);
+  overflow:hidden; flex-shrink:0;
+}
+#line-nums-inner {
+  padding:12px 10px 12px 0;
+  font-family:'Consolas',monospace; font-size:13px; line-height:21px;
+  color:var(--text-dim); text-align:right; white-space:pre;
+  pointer-events:none;
+}
+#err-gutter {
+  width:16px; background:var(--panel); border-right:1px solid var(--border);
+  overflow:hidden; flex-shrink:0;
+}
+#err-gutter-inner {
+  padding:12px 0; font-size:11px; line-height:21px;
+  text-align:center; white-space:pre; pointer-events:none;
+  font-family:'Consolas',monospace;
+}
+#hl-wrap { flex:1; position:relative; overflow:hidden; }
+#hl-overlay {
+  position:absolute; inset:0;
+  padding:12px 14px;
+  font-family:'Consolas',monospace; font-size:13px; line-height:21px;
+  white-space:pre-wrap; word-wrap:break-word;
+  pointer-events:none; overflow:hidden; color:transparent; background:transparent;
+}
+#editor {
+  position:absolute; inset:0;
+  padding:12px 14px;
+  font-family:'Consolas',monospace; font-size:13px; line-height:21px;
+  background:transparent; color:var(--text); border:none; outline:none;
+  resize:none; tab-size:4; caret-color:var(--accent);
+  overflow-y:auto; overflow-x:auto; white-space:pre; z-index:1;
+}
+#editor::selection { background:rgba(124,106,245,.2); }
+
+/* ─── RESIZER ─── */
+#resizer {
+  height:5px; background:var(--border); cursor:row-resize; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; transition:background .15s;
+}
+#resizer:hover { background:var(--accent); }
+#resizer::after { content:''; width:40px; height:2px; background:var(--border2); border-radius:1px; }
+
+/* ─── OUTPUT PANEL ─── */
+#output-panel {
+  height:220px; background:var(--panel2);
+  display:flex; flex-direction:column; flex-shrink:0;
+  min-height:80px; max-height:60vh;
+}
+#output-header {
+  height:30px; background:var(--panel);
+  border-top:1px solid var(--border);
+  display:flex; align-items:center; padding:0 10px; gap:10px; flex-shrink:0;
+}
+.output-tab {
+  padding:0 10px; height:100%;
+  display:flex; align-items:center;
+  font-family:'Consolas',monospace; font-size:11px;
+  color:var(--text-muted); cursor:pointer;
+  border-bottom:2px solid transparent; transition:all .15s;
+}
+.output-tab.active { color:var(--text-bright); border-bottom-color:var(--accent); }
+.output-tab:hover { color:var(--text); }
+#output-actions { margin-left:auto; display:flex; gap:6px; align-items:center; }
+#out-status-badge {
+  padding:2px 10px; border-radius:10px;
+  font-size:10px; font-family:'Consolas',monospace;
+  font-weight:600;
+}
+#console-out {
+  flex:1; overflow-y:auto; padding:8px 14px;
+  font-family:'Consolas',monospace; font-size:12.5px; line-height:1.7;
+}
+#error-list { flex:1; overflow-y:auto; padding:8px 10px; display:none; }
+.err-item {
+  display:flex; align-items:flex-start; gap:10px;
+  padding:6px 10px; border-radius:4px; margin-bottom:3px;
+  cursor:pointer; transition:background .1s;
+}
+.err-item:hover { background:var(--surface); }
+.err-item .ei-icon { width:16px; flex-shrink:0; font-size:13px; }
+.err-item .ei-line { color:var(--text-muted); font-family:'Consolas',monospace; font-size:11px; flex-shrink:0; }
+.err-item .ei-msg  { color:var(--text); font-size:12px; flex:1; }
+.err-item.type-err  { border-left:2px solid var(--red); }
+.err-item.type-warn { border-left:2px solid var(--yellow); }
+.err-item.type-info { border-left:2px solid var(--accent); }
+
+/* ─── STATUS BAR ─── */
+#statusbar {
+  height:24px; background:var(--surface2);
+  border-top:1px solid var(--border);
+  display:flex; align-items:center; padding:0 12px; gap:14px;
+  font-family:'Consolas',monospace; font-size:11px; color:var(--text-muted); flex-shrink:0;
+  position:relative; overflow:hidden;
+}
+#statusbar::before {
+  content:''; position:absolute; top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent); opacity:.3;
+}
+.sb-item { display:flex; align-items:center; gap:4px; }
+.sb-item span { color:var(--text); }
+.sb-lang-pill {
+  padding:1px 8px; border-radius:3px; font-size:10px;
+  background:rgba(124,106,245,.15); color:var(--accent);
+  border:1px solid rgba(124,106,245,.25);
+}
+.dot-ok   { width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 5px var(--green); }
+.dot-err  { width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block;box-shadow:0 0 5px var(--red); }
+.dot-idle { width:7px;height:7px;border-radius:50%;background:var(--text-dim);display:inline-block; }
+
+/* ─── SCROLLBARS ─── */
+::-webkit-scrollbar { width:7px; height:7px; }
+::-webkit-scrollbar-track { background:var(--panel2); }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:4px; }
+::-webkit-scrollbar-thumb:hover { background:var(--accent); }
+
+/* ─── CONSOLE COLORS ─── */
+.co-err  { color:var(--red); }
+.co-warn { color:var(--yellow); }
+.co-ok   { color:var(--green); }
+.co-info { color:var(--accent2); }
+.co-dim  { color:var(--text-dim); }
+.co-text { color:var(--text); }
+.co-bold { font-weight:bold; }
+.co-line { display:block; }
+
+/* ─── SYNTAX ─── */
+.hl-keyword   { color:var(--keyword-c); }
+.hl-type      { color:var(--type-c); }
+.hl-string    { color:var(--string-c); }
+.hl-comment   { color:var(--comment-c); font-style:italic; }
+.hl-number    { color:var(--number-c); }
+.hl-directive { color:var(--directive-c); }
+.hl-label     { color:var(--label-c); }
+.hl-operator  { color:var(--operator-c); }
+.hl-fn        { color:var(--fn-c); }
+.hl-port      { color:var(--port-c); }
+.hl-macro     { color:var(--yellow); }
+</style>
+</head>
+<body>
+
+<!-- TITLE BAR -->
+<div id="titlebar">
+  <div class="tb-logo">
+    <div class="comet-icon">☄</div>
+    <span class="logo-comet">Comet</span><span class="logo-ver">&nbsp;5.0</span>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="menu-bar">
+    <button class="menu-btn" onclick="newFile()">File</button>
+    <button class="menu-btn" onclick="showHelp()">Help</button>
+    <button class="menu-btn" onclick="window.open('http://Comet5.0.com','_blank')">comet5.0.com</button>
+  </div>
+  <div class="tb-right">
+    <span class="pill pill-ece">ECE STUDIO</span>
+    <span class="pill pill-offline">● OFFLINE</span>
+  </div>
+</div>
+
+<!-- LANGUAGE TABS -->
+<div id="lang-tabs">
+  <button class="lang-tab active" data-lang="verilog" onclick="switchLang('verilog')"><span class="tab-dot"></span>Verilog HDL</button>
+  <button class="lang-tab" data-lang="8051" onclick="switchLang('8051')"><span class="tab-dot"></span>8051 Assembly</button>
+  <button class="lang-tab" data-lang="c" onclick="switchLang('c')"><span class="tab-dot"></span>C Language</button>
+  <button class="lang-tab" data-lang="arduino" onclick="switchLang('arduino')"><span class="tab-dot"></span>Arduino IDE</button>
+</div>
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <button class="tb-action run" onclick="runCompile()">▶ Compile &amp; Check</button>
+  <div class="tb-sep2"></div>
+  <button class="tb-action" onclick="formatCode()">⊞ Format</button>
+  <button class="tb-action" onclick="copyCode()">⎘ Copy All</button>
+  <button class="tb-action" onclick="downloadCode()">↓ Save File</button>
+  <div class="tb-sep2"></div>
+  <button class="tb-action danger" onclick="clearAll()">✕ Clear</button>
+  <div class="tb-right-info">
+    <span>Ln <span id="sb-ln">1</span></span>
+    <span>Col <span id="sb-col">1</span></span>
+    <span><span id="sb-chars">0</span> chars</span>
+    <span id="sb-err-count" style="color:var(--red);display:none">⚠ <span id="sb-errs">0</span> issue(s)</span>
+  </div>
+</div>
+
+<!-- WORKSPACE -->
+<div id="workspace">
+  <div id="sidebar">
+    <div class="sb-header">☄ <span>Templates</span></div>
+    <div id="sb-scroll"><div id="snippet-list"></div></div>
+  </div>
+  <div id="editor-container">
+    <div class="editor-pane">
+      <div id="line-nums"><div id="line-nums-inner">1</div></div>
+      <div id="err-gutter"><div id="err-gutter-inner"> </div></div>
+      <div id="hl-wrap">
+        <div id="hl-overlay"></div>
+        <textarea id="editor" spellcheck="false" autocorrect="off" autocapitalize="off" autocomplete="off"
+          oninput="onEditorInput()" onkeydown="onEditorKey(event)"
+          onscroll="onEditorScroll()" onclick="updateCursor()" onkeyup="updateCursor()"></textarea>
+      </div>
+    </div>
+    <div id="resizer" onmousedown="startResize(event)"></div>
+    <div id="output-panel">
+      <div id="output-header">
+        <div class="output-tab active" onclick="showTab('console')" id="tab-console">Console</div>
+        <div class="output-tab" onclick="showTab('errors')" id="tab-errors">
+          Problems <span id="err-badge" style="display:none;margin-left:4px;padding:0 5px;border-radius:8px;font-size:10px;background:rgba(255,95,126,.2);color:var(--red);">0</span>
+        </div>
+        <div id="output-actions">
+          <span id="out-status-badge" style="background:rgba(69,69,101,.2);color:var(--text-muted);">IDLE</span>
+          <button class="tb-action" style="padding:2px 8px;font-size:10px;" onclick="clearConsole()">Clear</button>
+        </div>
+      </div>
+      <div id="console-out"></div>
+      <div id="error-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="statusbar">
+  <div class="sb-item"><span class="dot-idle" id="status-dot"></span></div>
+  <div class="sb-item"><span class="sb-lang-pill" id="status-lang">VERILOG HDL</span></div>
+  <div class="sb-item">☄ Comet 5.0</div>
+  <div class="sb-item" style="margin-left:auto;color:var(--accent);opacity:.6;">comet5.0.com — Offline Edition for Windows 10</div>
+</div>
+
+<script>
+'use strict';
+// =====================================================================
+// DATA
+// =====================================================================
+const LANG_META={
+  verilog:{label:'VERILOG HDL',ext:'v'},
+  '8051':{label:'8051 ASM',ext:'asm'},
+  c:{label:'C LANGUAGE',ext:'c'},
+  arduino:{label:'ARDUINO',ext:'ino'}
+};
+
+const TEMPLATES={
+  verilog:[
+    {name:'AND Gate',desc:'2-input AND gate',code:`module and_gate(\n  input  wire a,\n  input  wire b,\n  output wire y\n);\n  assign y = a & b;\nendmodule`},
+    {name:'D Flip-Flop',desc:'Sync reset, posedge clk',code:`module dff(\n  input  wire clk,\n  input  wire rst,\n  input  wire d,\n  output reg  q\n);\n  always @(posedge clk or posedge rst) begin\n    if (rst)\n      q <= 1'b0;\n    else\n      q <= d;\n  end\nendmodule`},
+    {name:'4-bit Counter',desc:'Synchronous up counter',code:`module counter4(\n  input  wire       clk,\n  input  wire       rst,\n  output reg [3:0]  count\n);\n  always @(posedge clk or posedge rst) begin\n    if (rst)\n      count <= 4'b0000;\n    else\n      count <= count + 1'b1;\n  end\nendmodule`},
+    {name:'2:1 Mux',desc:'2-to-1 multiplexer',code:`module mux2to1(\n  input  wire a, b, sel,\n  output wire y\n);\n  assign y = sel ? b : a;\nendmodule`},
+    {name:'4-bit ALU',desc:'Add/Sub/AND/OR ops',code:`module alu4(\n  input  wire [3:0] a, b,\n  input  wire [1:0] op,\n  output reg  [3:0] result,\n  output reg        zero\n);\n  always @(*) begin\n    case (op)\n      2'b00: result = a + b;\n      2'b01: result = a - b;\n      2'b10: result = a & b;\n      2'b11: result = a | b;\n      default: result = 4'b0000;\n    endcase\n    zero = (result == 4'b0000);\n  end\nendmodule`},
+    {name:'Testbench',desc:'Simulation template',code:`\`timescale 1ns/1ps\nmodule tb_dff;\n  reg  clk, rst, d;\n  wire q;\n  dff uut(.clk(clk),.rst(rst),.d(d),.q(q));\n  initial clk = 0;\n  always #5 clk = ~clk;\n  initial begin\n    rst=1; d=0; #20 rst=0;\n    #10 d=1; #10 d=0; #10 d=1;\n    #30 $finish;\n  end\n  initial $monitor(\"%0t clk=%b rst=%b d=%b q=%b\",$time,clk,rst,d,q);\nendmodule`}
+  ],
+  '8051':[
+    {name:'LED Blink',desc:'Toggle P1.0 with delay',code:`        ORG 0000H\nSTART:  SETB P1.0\n        CALL DELAY\n        CLR  P1.0\n        CALL DELAY\n        SJMP START\nDELAY:  MOV  R0,#0FFH\nD1:     MOV  R1,#0FFH\nD2:     DJNZ R1,D2\n        DJNZ R0,D1\n        RET\n        END`},
+    {name:'Add Numbers',desc:'A = A + B',code:`        ORG 0000H\n        MOV A,#25H\n        MOV B,#15H\n        ADD A,B\n        MOV 30H,A\nHALT:   SJMP HALT\n        END`},
+    {name:'Counter 0-9',desc:'Count with port output',code:`        ORG 0000H\n        MOV R0,#00H\nLOOP:   MOV A,R0\n        MOV P1,A\n        CALL DELAY\n        INC  R0\n        CJNE R0,#0AH,LOOP\n        MOV  R0,#00H\n        SJMP LOOP\nDELAY:  MOV R2,#0FFH\nD1:     DJNZ R2,D1\n        RET\n        END`},
+    {name:'Serial UART',desc:'Send char at 9600 baud',code:`        ORG 0000H\n        MOV  TMOD,#20H\n        MOV  TH1,#0FDH\n        MOV  SCON,#50H\n        SETB TR1\nMAIN:   MOV  SBUF,#41H\nWAIT:   JNB  TI,WAIT\n        CLR  TI\n        SJMP MAIN\n        END`},
+    {name:'7-Segment',desc:'Display digits 0–9',code:`        ORG 0000H\nSEG_TBL: DB 3FH,06H,5BH,4FH,66H,6DH,7DH,07H,7FH,6FH\nMAIN:   MOV  DPTR,#SEG_TBL\n        MOV  R0,#0AH\n        MOV  R1,#00H\nLOOP:   MOV  A,R1\n        MOVC A,@A+DPTR\n        MOV  P1,A\n        CALL DELAY\n        INC  R1\n        DJNZ R0,LOOP\n        MOV  R0,#0AH\n        MOV  R1,#00H\n        SJMP LOOP\nDELAY:  MOV R2,#0FFH\nD1:     DJNZ R2,D1\n        RET\n        END`}
+  ],
+  c:[
+    {name:'Hello World',desc:'Basic stdio output',code:`#include <stdio.h>\n\nint main(void) {\n    printf("Hello from Comet 5.0!\\n");\n    return 0;\n}`},
+    {name:'Bit Macros',desc:'Set / Clear / Toggle bits',code:`#include <stdio.h>\n#include <stdint.h>\n\n#define SET_BIT(r,n)    ((r)|=(1U<<(n)))\n#define CLEAR_BIT(r,n)  ((r)&=~(1U<<(n)))\n#define TOGGLE_BIT(r,n) ((r)^=(1U<<(n)))\n#define READ_BIT(r,n)   (((r)>>(n))&1U)\n\nint main(void) {\n    volatile uint8_t port = 0x00;\n    SET_BIT(port,3);\n    printf("SET   bit3: 0x%02X\\n",port);\n    TOGGLE_BIT(port,0);\n    printf("TOGGLE bit0: 0x%02X\\n",port);\n    CLEAR_BIT(port,3);\n    printf("CLEAR  bit3: 0x%02X\\n",port);\n    return 0;\n}`},
+    {name:'Linked List',desc:'Dynamic memory list',code:`#include <stdio.h>\n#include <stdlib.h>\n\ntypedef struct Node {\n    int data;\n    struct Node *next;\n} Node;\n\nNode* create(int d) {\n    Node *n=(Node*)malloc(sizeof(Node));\n    if(!n){fprintf(stderr,"malloc failed\\n");exit(1);}\n    n->data=d; n->next=NULL; return n;\n}\nvoid print(Node *h) {\n    while(h){printf("%d->",h->data);h=h->next;}\n    printf("NULL\\n");\n}\nvoid freeList(Node *h){\n    while(h){Node *t=h->next;free(h);h=t;}\n}\nint main(void){\n    Node *head=create(10);\n    head->next=create(20);\n    head->next->next=create(30);\n    print(head); freeList(head);\n    return 0;\n}`},
+    {name:'GPIO Registers',desc:'Register-level I/O',code:`#include <stdio.h>\n#include <stdint.h>\n\nvolatile uint8_t DDR_B  = 0x00;\nvolatile uint8_t PORT_B = 0x00;\n\n#define LED_PIN 5\n#define BTN_PIN 2\n\nint main(void){\n    DDR_B  |= (1<<LED_PIN);\n    DDR_B  &= ~(1<<BTN_PIN);\n    PORT_B |= (1<<BTN_PIN);  /* pull-up */\n    PORT_B ^= (1<<LED_PIN);  /* toggle LED */\n    printf("DDR_B  = 0x%02X\\n",DDR_B);\n    printf("PORT_B = 0x%02X\\n",PORT_B);\n    return 0;\n}`},
+    {name:'State Machine',desc:'Traffic light FSM',code:`#include <stdio.h>\n\ntypedef enum { RED,GREEN,YELLOW } State;\nconst char *name[]={"RED","GREEN","YELLOW"};\n\nState next(State s){\n    switch(s){\n        case RED:    return GREEN;\n        case GREEN:  return YELLOW;\n        case YELLOW: return RED;\n        default:     return RED;\n    }\n}\nint main(void){\n    State s=RED;\n    for(int i=0;i<9;i++){\n        printf("State: %s\\n",name[s]);\n        s=next(s);\n    }\n    return 0;\n}`}
+  ],
+  arduino:[
+    {name:'Blink LED',desc:'Built-in LED blink',code:`#define LED_PIN  13\n\nvoid setup() {\n  pinMode(LED_PIN, OUTPUT);\n  Serial.begin(9600);\n  Serial.println(F("Comet 5.0 — Blink"));\n}\nvoid loop() {\n  digitalWrite(LED_PIN, HIGH);\n  Serial.println(F("ON"));\n  delay(1000);\n  digitalWrite(LED_PIN, LOW);\n  Serial.println(F("OFF"));\n  delay(1000);\n}`},
+    {name:'Analog Read',desc:'ADC → Serial Monitor',code:`#define SENSOR A0\n\nvoid setup() {\n  Serial.begin(9600);\n  Serial.println(F("Analog Read"));\n}\nvoid loop() {\n  int raw   = analogRead(SENSOR);\n  float v   = raw*(5.0f/1023.0f);\n  Serial.print(F("Raw:")); Serial.print(raw);\n  Serial.print(F(" V:"));  Serial.println(v,2);\n  delay(500);\n}`},
+    {name:'PWM Fade',desc:'Smooth LED brightness',code:`#define PWM_PIN 9\n\nvoid setup() { pinMode(PWM_PIN,OUTPUT); }\nvoid loop() {\n  for(int i=0;i<=255;i++){analogWrite(PWM_PIN,i);delay(6);}\n  for(int i=255;i>=0;i--){analogWrite(PWM_PIN,i);delay(6);}\n}`},
+    {name:'I2C LCD',desc:'LiquidCrystal_I2C',code:`#include <Wire.h>\n#include <LiquidCrystal_I2C.h>\n\nLiquidCrystal_I2C lcd(0x27,16,2);\n\nvoid setup(){\n  lcd.begin(); lcd.backlight(); lcd.clear();\n  lcd.setCursor(2,0); lcd.print("Comet  5.0");\n  lcd.setCursor(0,1); lcd.print("ECE Studio Ready");\n}\nvoid loop(){}`},
+    {name:'Ultrasonic',desc:'HC-SR04 distance',code:`#define TRIG 9\n#define ECHO 10\n\nvoid setup(){\n  pinMode(TRIG,OUTPUT); pinMode(ECHO,INPUT);\n  Serial.begin(9600);\n}\nvoid loop(){\n  digitalWrite(TRIG,LOW);  delayMicroseconds(2);\n  digitalWrite(TRIG,HIGH); delayMicroseconds(10);\n  digitalWrite(TRIG,LOW);\n  long d=pulseIn(ECHO,HIGH,30000UL);\n  float cm=d*0.0343f/2.0f;\n  if(!d) Serial.println(F("Out of range"));\n  else { Serial.print(F("Dist: ")); Serial.print(cm,1); Serial.println(F(" cm")); }\n  delay(250);\n}`},
+    {name:'millis() Timer',desc:'Non-blocking blink',code:`#define LED 13\nunsigned long prev=0;\nbool state=false;\n\nvoid setup(){pinMode(LED,OUTPUT);Serial.begin(9600);}\nvoid loop(){\n  if(millis()-prev>=1000UL){\n    prev=millis(); state=!state;\n    digitalWrite(LED,state);\n    Serial.println(state?F("ON"):F("OFF"));\n  }\n}`}
+  ]
+};
+
+// =====================================================================
+// SYNTAX HIGHLIGHTING
+// =====================================================================
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function sp(c,t){return`<span class="${c}">${t}</span>`;}
+
+function tokenise(code,rules){
+  let r='',rem=code;
+  while(rem.length){
+    let best=null,bi=Infinity,bm=null;
+    for(const rule of rules){
+      rule.re.lastIndex=0;
+      const m=rule.re.exec(rem);
+      if(m&&m.index<bi){bi=m.index;best=rule;bm=m;}
+    }
+    if(!best){r+=esc(rem);break;}
+    if(bi>0)r+=esc(rem.slice(0,bi));
+    r+=sp(best.cls,esc(bm[0]));
+    rem=rem.slice(bi+bm[0].length);
+  }
+  return r;
+}
+
+function hlVerilog(c){
+  return tokenise(c,[
+    {re:/\/\*[\s\S]*?\*\//g,cls:'hl-comment'},
+    {re:/\/\/[^\n]*/g,cls:'hl-comment'},
+    {re:/"[^"]*"/g,cls:'hl-string'},
+    {re:/`\w+[^\n]*/g,cls:'hl-directive'},
+    {re:/\$\w+/g,cls:'hl-directive'},
+    {re:/\b(module|endmodule|input|output|inout|wire|reg|integer|parameter|localparam|assign|always|initial|begin|end|if|else|case|casez|casex|endcase|for|while|forever|repeat|posedge|negedge|or|and|not|buf|task|endtask|function|endfunction|generate|endgenerate|genvar)\b/g,cls:'hl-keyword'},
+    {re:/\b(logic|bit|byte|shortint|int|longint|real|time|string|void)\b/g,cls:'hl-type'},
+    {re:/\b\d+'[bBoOdDhH][0-9a-fA-FxXzZ_?]+\b|\b\d+\b/g,cls:'hl-number'},
+    {re:/[&|^~!<>=+\-*/%@#]/g,cls:'hl-operator'},
+  ]);
+}
+
+function hl8051(c){
+  return tokenise(c,[
+    {re:/;[^\n]*/g,cls:'hl-comment'},
+    {re:/'[^']*'/g,cls:'hl-string'},
+    {re:/^\s*\w+:/gm,cls:'hl-label'},
+    {re:/\b(ORG|END|DB|DW|EQU|BIT|DATA|IDATA|XDATA|CODE|DS|DBIT)\b/gi,cls:'hl-directive'},
+    {re:/\b(MOV|MOVX|MOVC|XCH|XCHD|PUSH|POP|ADD|ADDC|SUBB|INC|DEC|MUL|DIV|DA|CLR|SETB|CPL|ANL|ORL|XRL|RL|RLC|RR|RRC|SWAP|JMP|LJMP|AJMP|SJMP|JZ|JNZ|JC|JNC|JB|JNB|JBC|DJNZ|CJNE|CALL|LCALL|ACALL|RET|RETI|NOP)\b/gi,cls:'hl-keyword'},
+    {re:/\b(ACC|A|B|SP|DPL|DPH|DPTR|PSW|IE|IP|TMOD|TCON|SCON|SBUF|PCON|TH0|TL0|TH1|TL1|P0|P1|P2|P3|R0|R1|R2|R3|R4|R5|R6|R7|CY|AC|F0|OV)\b/g,cls:'hl-port'},
+    {re:/\b[0-9A-Fa-f]+H\b|\b\d+[Dd]?\b|\b[01]+[Bb]\b/g,cls:'hl-number'},
+  ]);
+}
+
+function hlC(c){
+  return tokenise(c,[
+    {re:/\/\*[\s\S]*?\*\//g,cls:'hl-comment'},
+    {re:/\/\/[^\n]*/g,cls:'hl-comment'},
+    {re:/#\s*(include|define|undef|ifdef|ifndef|endif|if|else|elif|pragma|error)\b[^\n]*/g,cls:'hl-directive'},
+    {re:/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g,cls:'hl-string'},
+    {re:/\b(auto|break|case|char|const|continue|default|do|double|else|enum|extern|float|for|goto|if|inline|int|long|register|return|short|signed|sizeof|static|struct|switch|typedef|union|unsigned|void|volatile|while)\b/g,cls:'hl-keyword'},
+    {re:/\b(uint8_t|uint16_t|uint32_t|uint64_t|int8_t|int16_t|int32_t|int64_t|size_t|bool|true|false|NULL|EOF)\b/g,cls:'hl-type'},
+    {re:/\b0[xX][0-9a-fA-F]+[UuLl]*\b|\b\d+\.\d*[fF]?\b|\b\d+[UuLl]*\b/g,cls:'hl-number'},
+    {re:/\b([a-zA-Z_]\w*)\s*(?=\()/g,cls:'hl-fn'},
+    {re:/[+\-*\/=<>!&|^~%?:]/g,cls:'hl-operator'},
+  ]);
+}
+
+function hlArduino(c){
+  return tokenise(c,[
+    {re:/\/\*[\s\S]*?\*\//g,cls:'hl-comment'},
+    {re:/\/\/[^\n]*/g,cls:'hl-comment'},
+    {re:/#\s*(include|define|undef|ifdef|ifndef|endif|pragma)\b[^\n]*/g,cls:'hl-directive'},
+    {re:/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g,cls:'hl-string'},
+    {re:/\b(void|int|float|double|bool|char|byte|word|long|unsigned|String|boolean|const|static|volatile|return|if|else|for|while|do|switch|case|default|break|continue|class|new|delete|true|false|nullptr)\b/g,cls:'hl-keyword'},
+    {re:/\b(setup|loop|pinMode|digitalWrite|digitalRead|analogRead|analogWrite|delay|delayMicroseconds|millis|micros|pulseIn|Serial|Wire|SPI|begin|end|print|println|read|write|available|flush|peek)\b/g,cls:'hl-fn'},
+    {re:/\b(HIGH|LOW|INPUT|OUTPUT|INPUT_PULLUP|LED_BUILTIN|A0|A1|A2|A3|A4|A5|MOSI|MISO|SCK|SS|SDA|SCL|true|false|PI)\b/g,cls:'hl-port'},
+    {re:/\b0[xX][0-9a-fA-F]+[UuLl]*\b|\b\d+\.\d*[fF]?\b|\b\d+[UuLl]*\b/g,cls:'hl-number'},
+    {re:/\b([a-zA-Z_]\w*)\s*(?=\()/g,cls:'hl-fn'},
+    {re:/[+\-*\/=<>!&|^~%?:]/g,cls:'hl-operator'},
+  ]);
+}
+
+const HLRS={verilog:hlVerilog,'8051':hl8051,c:hlC,arduino:hlArduino};
+
+// =====================================================================
+// ERROR CHECKERS
+// =====================================================================
+function checkVerilog(ls){
+  const diags=[],c=ls.join('\n');
+  if(!c.match(/\bmodule\b/))  diags.push({line:1,type:'err',msg:'Missing module declaration'});
+  if(!c.match(/\bendmodule\b/))diags.push({line:ls.length,type:'err',msg:'Missing endmodule'});
+  const beg=(c.match(/\bbegin\b/g)||[]).length;
+  const en=(c.match(/\bend\b/g)||[]).length-(c.match(/\bendmodule\b/g)||[]).length-(c.match(/\bendcase\b/g)||[]).length-(c.match(/\bendfunction\b/g)||[]).length-(c.match(/\bendtask\b/g)||[]).length;
+  if(beg!==en)diags.push({line:1,type:'err',msg:`Mismatched begin/end (${beg} begin, ${en} end)`});
+  const cse=(c.match(/\bcase[zx]?\s*\(/g)||[]).length;
+  const ecs=(c.match(/\bendcase\b/g)||[]).length;
+  if(cse!==ecs)diags.push({line:1,type:'err',msg:`Mismatched case/endcase (${cse} vs ${ecs})`});
+  ls.forEach((ln,i)=>{
+    if(/always\s*@\(posedge|negedge/.test(ln)){
+      const blk=ls.slice(i,i+20).join('\n');
+      if(/[^!<>]=[^=<]/.test(blk))diags.push({line:i+1,type:'warn',msg:'Blocking (=) in sequential always block — prefer non-blocking (<=)'});
+    }
+    if(/always\s*@\(\*\)/.test(ln)||/always\s*@\( \* \)/.test(ln)){
+      const blk=ls.slice(i,i+20).join('\n');
+      if(/<=[^=]/.test(blk))diags.push({line:i+1,type:'warn',msg:'Non-blocking (<=) in combinational block — prefer blocking (=)'});
+    }
+  });
+  return diags;
+}
+
+function check8051(ls){
+  const diags=[],c=ls.join('\n').toUpperCase();
+  if(!c.match(/\bORG\b/))diags.push({line:1,type:'warn',msg:'No ORG directive — origin assumed 0000H'});
+  if(!c.match(/\bEND\s*$/m))diags.push({line:ls.length,type:'warn',msg:'Missing END directive'});
+  const calls=(c.match(/\b[LA]?CALL\b/g)||[]).length;
+  const rets=(c.match(/\bRET(I)?\b/g)||[]).length;
+  if(calls>0&&rets===0)diags.push({line:1,type:'err',msg:`${calls} CALL(s) but no RET found`});
+  ls.forEach((ln,i)=>{
+    const t=ln.trim().toUpperCase();
+    if(/\bR[89]\b/.test(t))diags.push({line:i+1,type:'err',msg:'Invalid register: 8051 only has R0–R7'});
+    if(/DJNZ\s+(R[0-7])/.test(t)){
+      const reg=t.match(/DJNZ\s+(R[0-7])/)[1];
+      const prev=ls.slice(0,i).join('\n').toUpperCase();
+      if(!prev.match(new RegExp('MOV\\s+'+reg+'\\s*,')))
+        diags.push({line:i+1,type:'warn',msg:`DJNZ uses ${reg} but no prior MOV ${reg},#val`});
+    }
+  });
+  return diags;
+}
+
+function checkC(ls){
+  const diags=[],c=ls.join('\n');
+  if(!c.match(/\bmain\s*\(/))diags.push({line:1,type:'err',msg:'No main() function found'});
+  let dep=0,fm=-1;
+  ls.forEach((ln,i)=>{for(const ch of ln){if(ch==='{')dep++;else if(ch==='}'){dep--;if(dep<0&&fm<0)fm=i+1;}}});
+  if(dep!==0||fm>0)diags.push({line:fm>0?fm:ls.length,type:'err',msg:`Unbalanced braces (net=${dep})`});
+  let pd=0;
+  ls.forEach(ln=>{const s=ln.replace(/"[^"]*"/g,'""').replace(/\/\/.*/,'');for(const ch of s){if(ch==='(')pd++;else if(ch===')')pd--;}});
+  if(pd!==0)diags.push({line:ls.length,type:'err',msg:`Unbalanced parentheses (net=${pd})`});
+  ls.forEach((ln,i)=>{
+    const t=ln.trim();
+    if(/\bgets\s*\(/.test(t))diags.push({line:i+1,type:'err',msg:'gets() is unsafe — use fgets() instead'});
+    if(/void\s+main\s*\(/.test(t))diags.push({line:i+1,type:'warn',msg:'void main() is non-standard — use int main(void)'});
+    if(/(=\s*malloc|=\s*calloc)\s*\(/.test(t)){
+      const nxt=ls.slice(i+1,i+5).join('\n');
+      if(!nxt.match(/if\s*\(!?\s*\w+|NULL/))diags.push({line:i+1,type:'warn',msg:'malloc result not checked for NULL'});
+    }
+  });
+  if(!c.match(/return\s+0\s*;/)&&c.match(/int\s+main/))diags.push({line:ls.length,type:'warn',msg:'No return 0 in main()'});
+  return diags;
+}
+
+function checkArduino(ls){
+  const diags=[],c=ls.join('\n');
+  if(!c.match(/void\s+setup\s*\(\s*\)/))diags.push({line:1,type:'err',msg:'Missing setup() function'});
+  if(!c.match(/void\s+loop\s*\(\s*\)/))diags.push({line:1,type:'err',msg:'Missing loop() function'});
+  let dep=0,fm=-1;
+  ls.forEach((ln,i)=>{for(const ch of ln){if(ch==='{')dep++;else if(ch==='}'){dep--;if(dep<0&&fm<0)fm=i+1;}}});
+  if(dep!==0)diags.push({line:fm>0?fm:ls.length,type:'err',msg:`Unbalanced braces (net=${dep})`});
+  ls.forEach((ln,i)=>{
+    const t=ln.trim();
+    if(/\bdelay\s*\(/.test(t))diags.push({line:i+1,type:'warn',msg:'delay() blocks CPU — consider millis() for non-blocking code'});
+    const am=t.match(/analogWrite\s*\(\s*(\d+)/);
+    if(am){const p=parseInt(am[1]);if(![3,5,6,9,10,11].includes(p))diags.push({line:i+1,type:'err',msg:`analogWrite pin ${p} is not PWM — use 3,5,6,9,10,11`});}
+    if(/Serial\.(print|read|available|write)/.test(t)&&!c.match(/Serial\.begin\s*\(/))
+      diags.push({line:i+1,type:'err',msg:'Serial used without Serial.begin() in setup()'});
+    if(/Wire\.(write|read|request|beginTrans)/.test(t)&&!c.match(/Wire\.begin\s*\(/))
+      diags.push({line:i+1,type:'warn',msg:'Wire used without Wire.begin() in setup()'});
+  });
+  return diags;
+}
+
+const CHECKS={verilog:checkVerilog,'8051':check8051,c:checkC,arduino:checkArduino};
+
+// =====================================================================
+// STATE
+// =====================================================================
+let LANG='verilog', DIAGS=[];
+
+// =====================================================================
+// INIT
+// =====================================================================
+window.addEventListener('load',()=>{switchLang('verilog');updateLineNumbers();printWelcome();});
+
+function printWelcome(){
+  document.getElementById('console-out').innerHTML=[
+    `<span class="co-info co-bold">  ☄  Comet 5.0 — ECE IDE  |  comet5.0.com</span>`,
+    `<span class="co-dim">  Platform : Windows 10 / 11  •  100% Offline</span>`,
+    `<span class="co-dim">  Languages: Verilog HDL  |  8051 ASM  |  C  |  Arduino</span>`,
+    `<span class="co-dim">  Shortcut : Ctrl+Enter → Compile & Check</span>`,
+    `<span class="co-dim">  ──────────────────────────────────────────────</span>`,
+    `<span class="co-dim">  Load a template from the sidebar or start coding.</span>`,
+  ].join('\n');
+}
+
+// =====================================================================
+// LANGUAGE SWITCH
+// =====================================================================
+function switchLang(lang){
+  LANG=lang; DIAGS=[];
+  document.querySelectorAll('.lang-tab').forEach(t=>t.classList.toggle('active',t.dataset.lang===lang));
+  document.getElementById('status-lang').textContent=LANG_META[lang].label;
+  loadSidebar(lang); clearDiags(); reHL();
+}
+function loadSidebar(lang){
+  const el=document.getElementById('snippet-list');
+  el.innerHTML=`<div class="sb-group-title">${LANG_META[lang].label}</div>`;
+  (TEMPLATES[lang]||[]).forEach(t=>{
+    const c=document.createElement('div');
+    c.className='snippet-card';
+    c.innerHTML=`<div class="sc-name">${t.name}</div><div class="sc-desc">${t.desc}</div>`;
+    c.onclick=()=>{document.getElementById('editor').value=t.code;onEditorInput();};
+    el.appendChild(c);
+  });
+}
+
+// =====================================================================
+// EDITOR
+// =====================================================================
+function onEditorInput(){reHL();updateLineNumbers();updateCursor();clearTimeout(window._dt);window._dt=setTimeout(liveDiag,700);}
+function onEditorKey(e){
+  const ed=document.getElementById('editor');
+  if(e.key==='Tab'){e.preventDefault();const s=ed.selectionStart;ed.value=ed.value.slice(0,s)+'    '+ed.value.slice(ed.selectionEnd);ed.selectionStart=ed.selectionEnd=s+4;onEditorInput();}
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runCompile();}
+  if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();downloadCode();}
+}
+function onEditorScroll(){
+  const t=document.getElementById('editor').scrollTop;
+  document.getElementById('line-nums-inner').style.transform=`translateY(${-t}px)`;
+  document.getElementById('err-gutter-inner').style.transform=`translateY(${-t}px)`;
+}
+function updateCursor(){
+  const ed=document.getElementById('editor'),v=ed.value,p=ed.selectionStart;
+  const ls=v.slice(0,p).split('\n');
+  document.getElementById('sb-ln').textContent=ls.length;
+  document.getElementById('sb-col').textContent=ls[ls.length-1].length+1;
+  document.getElementById('sb-chars').textContent=v.length;
+}
+function reHL(){
+  const code=document.getElementById('editor').value;
+  document.getElementById('hl-overlay').innerHTML=(HLRS[LANG]||esc)(code);
+}
+function updateLineNumbers(){
+  const n=document.getElementById('editor').value.split('\n').length;
+  let h='';for(let i=1;i<=n;i++)h+=i+'\n';
+  document.getElementById('line-nums-inner').textContent=h;
+  updateGutter();
+}
+function updateGutter(){
+  const n=document.getElementById('editor').value.split('\n').length;
+  const map={};
+  DIAGS.forEach(d=>{if(!map[d.line]||d.type==='err')map[d.line]=d.type;});
+  const gi=document.getElementById('err-gutter-inner');
+  gi.innerHTML='';
+  for(let i=1;i<=n;i++){
+    const s=document.createElement('span');
+    s.style.cssText='display:block;line-height:21px;';
+    const t=map[i];
+    if(t==='err'){s.style.color='var(--red)';s.textContent='✘';}
+    else if(t==='warn'){s.style.color='var(--yellow)';s.textContent='▲';}
+    else s.textContent=' ';
+    gi.appendChild(s);
+  }
+}
+
+// =====================================================================
+// DIAGNOSTICS
+// =====================================================================
+function liveDiag(){
+  const c=document.getElementById('editor').value;
+  if(!c.trim()){DIAGS=[];clearDiags();return;}
+  DIAGS=CHECKS[LANG](c.split('\n'));
+  updateGutter(); updateBadge();
+}
+function clearDiags(){DIAGS=[];updateGutter();updateBadge();}
+function updateBadge(){
+  const n=DIAGS.filter(d=>d.type==='err'||d.type==='warn').length;
+  const b=document.getElementById('err-badge');
+  const ec=document.getElementById('sb-err-count');
+  b.style.display=n?'inline':'none'; b.textContent=n;
+  ec.style.display=n?'inline':'none'; document.getElementById('sb-errs').textContent=n;
+}
+
+// =====================================================================
+// COMPILE
+// =====================================================================
+function runCompile(){
+  const code=document.getElementById('editor').value.trim();
+  if(!code){printConsole([{type:'warn',msg:'Editor is empty. Load a template or write code.'}],false);return;}
+  const ls=code.split('\n');
+  DIAGS=CHECKS[LANG](ls); updateGutter(); updateBadge();
+  const errs=DIAGS.filter(d=>d.type==='err');
+  const warns=DIAGS.filter(d=>d.type==='warn');
+  const ok=errs.length===0;
+  const ts=new Date().toLocaleTimeString();
+  const msgs=[
+    {type:'info',msg:`[${ts}]  ☄  Comet 5.0 Analyzer — ${LANG_META[LANG].label}`},
+    {type:'info',msg:`Lines: ${ls.length}  |  Characters: ${code.length}`},
+    {type:'dim', msg:'──────────────────────────────────────────────'},
+  ];
+  if(LANG==='verilog'){
+    const m=code.match(/module\s+(\w+)/);
+    if(m)msgs.push({type:'ok',msg:`Module: ${m[1]}`});
+    const ins=(code.match(/\binput\b/g)||[]).length;
+    const outs=(code.match(/\boutput\b/g)||[]).length;
+    msgs.push({type:'info',msg:`Ports: ${ins} input(s), ${outs} output(s)`});
+    if(/always\s*@\(posedge/.test(code))msgs.push({type:'info',msg:'Sequential (clocked) design'});
+    if(/always\s*@\(\*\)/.test(code))msgs.push({type:'info',msg:'Combinational logic block'});
+    if(/`timescale/.test(code))msgs.push({type:'ok',msg:'Timescale directive found'});
+  } else if(LANG==='8051'){
+    const cnt=(code.match(/\b(MOV|ADD|SUBB|MUL|DIV|SJMP|LJMP|CALL|RET|NOP|SETB|CLR|DJNZ|CJNE|ANL|ORL)\b/gi)||[]).length;
+    msgs.push({type:'info',msg:`~${cnt} instructions found`});
+    const lbls=(code.match(/^\s*\w+:/gm)||[]).map(l=>l.trim().replace(':',''));
+    if(lbls.length)msgs.push({type:'info',msg:`Labels: ${lbls.join(', ')}`});
+  } else if(LANG==='c'){
+    const fns=(code.match(/\b\w+\s+\w+\s*\([^)]*\)\s*\{/g)||[]).length;
+    msgs.push({type:'info',msg:`Function definitions: ~${fns}`});
+    if(/uint[0-9]+_t/.test(code))msgs.push({type:'ok',msg:'Fixed-width types (stdint.h) detected'});
+    if(/volatile/.test(code))msgs.push({type:'ok',msg:'volatile keyword — hardware register access'});
+  } else if(LANG==='arduino'){
+    if(code.match(/Serial\.begin/))msgs.push({type:'ok',msg:'Serial.begin() found'});
+    if(code.match(/Wire\.begin/))msgs.push({type:'ok',msg:'I2C Wire.begin() found'});
+    const inc=code.match(/#include\s*<[^>]+>/g)||[];
+    if(inc.length)msgs.push({type:'info',msg:`Libraries: ${inc.join(' ')}`});
+  }
+  msgs.push({type:'dim',msg:'──────────────────────────────────────────────'});
+  if(warns.length){warns.forEach(w=>msgs.push({type:'warn',msg:`⚠ Line ${w.line}: ${w.msg}`}));msgs.push({type:'dim',msg:'──────────────────────────────────────────────'});}
+  if(errs.length) {errs.forEach(e=>msgs.push({type:'err',msg:`✘ Line ${e.line}: ${e.msg}`}));msgs.push({type:'dim',msg:'──────────────────────────────────────────────'});}
+  msgs.push(ok
+    ?{type:'ok', msg:`✔  BUILD PASSED — 0 errors, ${warns.length} warning(s)`}
+    :{type:'err',msg:`✘  BUILD FAILED — ${errs.length} error(s), ${warns.length} warning(s)`}
+  );
+  printConsole(msgs,ok);
+  buildProblems();
+  showTab('console');
+}
+
+function printConsole(msgs,ok){
+  const out=document.getElementById('console-out');
+  out.innerHTML=msgs.map(m=>{
+    const c=m.type==='err'?'co-err':m.type==='warn'?'co-warn':m.type==='ok'?'co-ok':m.type==='info'?'co-info':'co-dim';
+    return`<span class="co-line ${c}">${esc(m.msg)}</span>`;
+  }).join('\n');
+  out.scrollTop=out.scrollHeight;
+  const dot=document.getElementById('status-dot');
+  const b=document.getElementById('out-status-badge');
+  if(ok){dot.className='dot-ok';b.textContent='PASSED';b.style.cssText='background:rgba(109,255,192,.15);color:var(--green);border:1px solid rgba(109,255,192,.3);padding:2px 10px;border-radius:10px;font-size:10px;font-family:Consolas,monospace;font-weight:600;';}
+  else  {dot.className='dot-err';b.textContent='FAILED';b.style.cssText='background:rgba(255,95,126,.15);color:var(--red);border:1px solid rgba(255,95,126,.3);padding:2px 10px;border-radius:10px;font-size:10px;font-family:Consolas,monospace;font-weight:600;';}
+}
+
+function buildProblems(){
+  const el=document.getElementById('error-list');
+  if(!DIAGS.length){el.innerHTML='<div style="color:var(--text-dim);padding:20px;font-family:Consolas,monospace;font-size:12px;">✔ No problems found</div>';return;}
+  el.innerHTML='';
+  DIAGS.forEach(d=>{
+    const div=document.createElement('div');
+    div.className=`err-item type-${d.type}`;
+    div.innerHTML=`<span class="ei-icon">${d.type==='err'?'✘':d.type==='warn'?'⚠':'ℹ'}</span><span class="ei-line">Ln ${d.line}</span><span class="ei-msg">${esc(d.msg)}</span>`;
+    div.onclick=()=>goTo(d.line);
+    el.appendChild(div);
+  });
+}
+
+function goTo(n){
+  const ed=document.getElementById('editor'),ls=ed.value.split('\n');
+  let p=0;for(let i=0;i<n-1&&i<ls.length;i++)p+=ls[i].length+1;
+  ed.focus();ed.setSelectionRange(p,p+(ls[n-1]||'').length);
+}
+
+function showTab(name){
+  document.getElementById('tab-console').classList.toggle('active',name==='console');
+  document.getElementById('tab-errors').classList.toggle('active',name==='errors');
+  document.getElementById('console-out').style.display=name==='console'?'block':'none';
+  document.getElementById('error-list').style.display=name==='errors'?'block':'none';
+}
+
+function clearConsole(){
+  document.getElementById('console-out').innerHTML='<span class="co-dim">// Console cleared. Ctrl+Enter to compile.</span>';
+  document.getElementById('error-list').innerHTML='';
+  document.getElementById('status-dot').className='dot-idle';
+  const b=document.getElementById('out-status-badge');
+  b.textContent='IDLE';b.style.cssText='background:rgba(69,69,101,.2);color:var(--text-muted);padding:2px 10px;border-radius:10px;font-size:10px;font-family:Consolas,monospace;';
+}
+
+function newFile(){if(document.getElementById('editor').value.trim()&&!confirm('Clear editor and start new?'))return;document.getElementById('editor').value='';onEditorInput();clearConsole();}
+function clearAll(){document.getElementById('editor').value='';onEditorInput();clearConsole();}
+function copyCode(){
+  const c=document.getElementById('editor').value;if(!c)return;
+  navigator.clipboard.writeText(c).then(()=>{const b=event.target;const o=b.textContent;b.textContent='✔ Copied!';b.style.color='var(--green)';setTimeout(()=>{b.textContent=o;b.style.color='';},1500);}).catch(()=>{const t=document.createElement('textarea');t.value=c;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);});
+}
+function downloadCode(){
+  const c=document.getElementById('editor').value;if(!c)return;
+  const ext=LANG_META[LANG].ext;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([c],{type:'text/plain'}));
+  a.download=`comet5_${LANG}.${ext}`;a.click();URL.revokeObjectURL(a.href);
+}
+function formatCode(){
+  const ed=document.getElementById('editor');
+  ed.value=ed.value.split('\n').map(l=>l.replace(/\t/g,'    ').replace(/\s+$/,'')).join('\n');
+  onEditorInput();
+}
+function showHelp(){
+  alert('☄  Comet 5.0 — Keyboard Shortcuts\n\nCtrl + Enter  → Compile & Check\nCtrl + S      → Save file\nTab           → Insert 4 spaces\n\nVisit: comet5.0.com');
+}
+function startResize(e){
+  e.preventDefault();
+  const sy=e.clientY,p=document.getElementById('output-panel'),sh=p.offsetHeight;
+  const mv=ev=>{p.style.height=Math.max(80,Math.min(window.innerHeight*.6,sh+(sy-ev.clientY)))+'px';};
+  const up=()=>{document.removeEventListener('mousemove',mv);document.removeEventListener('mouseup',up);};
+  document.addEventListener('mousemove',mv);document.addEventListener('mouseup',up);
+}
+</script>
+</body>
+</html>
